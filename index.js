@@ -14,7 +14,15 @@ const handler = async event => {
     return fetch(request)
   }
 
-  const url = new URL(request.url)
+  const url = new URL(request.url);
+
+  const mediaRegex = /\.(png|jpeg|jpg|webp|mp4)([?\/].*)?$/i; // Matches file extensions for images and videos
+  const wpRegex = /^\/wp-/; // Matches URLs that start with /wp-
+
+  if(mediaRegex.test(url.pathname) || 
+     wpRegex.test(url.pathname)){
+    return fetch(request)
+  }
 
   // Check if the path is already prefixed when enabled in config.
   if (!config.listen_on_prefixed_paths) {
