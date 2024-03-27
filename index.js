@@ -105,7 +105,7 @@ const handler = async event => {
     headers.get('Accept-Language')
   )
 
-  console.log('Lang: ' + language);
+  console.log('Lang: ' + language + " Header:" + headers.get('Accept-Language') + "|" + headers.get('accept-language'));
 
   // If accept-language-parser didn't manage to find a supported language, use the default one.
   if (!language) {
