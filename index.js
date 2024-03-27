@@ -96,7 +96,8 @@ const handler = async event => {
 
   // Use default language if no Accept-Language Header was sent by the client.
   if (!headers.has('Accept-Language')) {
-    return redirectWithPrefix(url, config.default_language)
+    return fetch(request);
+    //return redirectWithPrefix(url, config.default_language)
   }
 
   let language = pick(
