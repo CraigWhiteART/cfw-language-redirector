@@ -5,16 +5,17 @@ module.exports = {
   supported_languages: ['de', 'es', 'fr', 'de', 'pt', 'it', 'nl', 'ro', 'hu', 'lt', 'en' ],
   // The following is an array of paths the redirector should handle request for.
   // Those can be literal paths (/foo/bar), paths with placeholders (/foo/*.bar) or paths with wildcards (/foo/**)
-  listen_on_paths: [{
-  pattern: 'content/:pageName',
-  rules: {
-    pageName: {
-      regex: '^(?!.*\\.(jpg|png|webp)$).*',
-      convert: (v) => v,
-      validate: (v) => !/\.(jpg|png|webp)$/.test(v)
-    }
-  }
-}],
+  listen_on_paths: [ "/*" ],
+//   listen_on_paths: [{
+//   pattern: 'content/:pageName',
+//   rules: {
+//     pageName: {
+//       regex: '^(?!.*\\.(jpg|png|webp)$).*',
+//       convert: (v) => v,
+//       validate: (v) => !/\.(jpg|png|webp)$/.test(v)
+//     }
+//   }
+// }],
   // This sets the worker to listen on all paths not prefixed with a language.
   listen_on_all_paths: false,
   // This will always redirect when a 404 would be returned otherwise
