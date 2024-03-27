@@ -105,6 +105,8 @@ const handler = async event => {
     headers.get('Accept-Language')
   )
 
+  console.log('Lang: ' + language);
+
   // If accept-language-parser didn't manage to find a supported language, use the default one.
   if (!language) {
     language = config.default_language
