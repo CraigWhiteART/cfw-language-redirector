@@ -100,9 +100,10 @@ const handler = async event => {
     //return redirectWithPrefix(url, config.default_language)
   }
 
+  let header = headers.get('Accept-Language');
   let language = pick(
     config.supported_languages,
-    headers.get('Accept-Language')
+    header
   )
   if(!language || language == config.default_language){
     header = header.replace(/([a-zA-Z]{2})-[a-zA-Z]{2}/, '$1');
