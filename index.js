@@ -104,6 +104,13 @@ const handler = async event => {
     config.supported_languages,
     headers.get('Accept-Language')
   )
+  if(!language || language == config.default_language){
+    header = header.replace(/([a-zA-Z]{2})-[a-zA-Z]{2}/, '$1');
+    language = parser.pick(
+      config.supported_languages,
+      header
+    )
+  }
 
   console.log('Lang: ' + language + " Header:" + headers.get('Accept-Language') + "|" + headers.get('accept-language'));
 
