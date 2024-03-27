@@ -108,6 +108,9 @@ const handler = async event => {
   if (!language) {
     language = config.default_language
   }
+  if(language == config.default_language){
+    return fetch(request);
+  }
 
   // Do the redirect.
   return redirectWithPrefix(url, language)
