@@ -17,8 +17,11 @@ async function handleRequest(event) {
   const request = event.request
   const url = new URL(request.url)
 
+  // Detect the language
+  const detectedLanguage = detectLanguage(request)
+
   // Check cache first
-  const cacheKey = new Request(url.toString(), request)
+  const cacheKey = new Request(`${url.toString()}:${detectedLanguage}`, request)
   const cachedResponse = await CACHE.match(cacheKey)
 
   if (cachedResponse) {
@@ -26,7 +29,7 @@ async function handleRequest(event) {
   }
 
   // If not in cache, proceed with the original logic
-  const response = await handler(event)
+  const response = await handler(event, detectedLanguage)
 
   // Cache the response if it's a redirect
   if (response.status === 302) {
@@ -36,7 +39,27 @@ async function handleRequest(event) {
   return response
 }
 
-const handler = async event => {
+function detectLanguage(request) {
+  const headers = request.headers
+
+  if (!headers.has('Accept-Language')) {
+    return config.default_language
+  }
+
+  let header = headers.get('Accept-Language')
+  let language = pick(config.supported_languages, header)
+  
+  if (!language || language === config.default_language) {
+    header = header.replace(/([a-zA-Z]{2})-[a-zA-Z]{2}/, '$1')
+    language = pick(config.supported_languages, header)
+  }
+
+  console.log('Lang: ' + language + " Header:" + headers.get('Accept-Language') + "|" + headers.get('accept-language'))
+
+  return language || config.default_language
+}
+
+const handler = async (event, detectedLanguage) => {
   const request = event.request
 
   // Only run on GET or HEAD requests
@@ -50,8 +73,7 @@ const handler = async event => {
   const mediaRegex = /\.(png|jpeg|jpg|webp|mp4)([?\/].*)?$/i; // Matches file extensions for images and videos
   const wpRegex = /^\/wp-/; // Matches URLs that start with /wp-
 
-  if(mediaRegex.test(url.pathname) || 
-     wpRegex.test(url.pathname)){
+  if (mediaRegex.test(url.pathname) || wpRegex.test(url.pathname)) {
     return fetch(request)
   }
 
@@ -59,29 +81,17 @@ const handler = async event => {
   if (!config.listen_on_prefixed_paths) {
     const urlArray = url.pathname.split('/')
 
-    // Ignore if the url has no first part e.g. /
     if (urlArray.length > 2) {
       const firstPart = urlArray[1]
 
-      let hasLanguage = false
-
-      for (const language of config.supported_languages) {
-        // If there was a match, break from the loop.
-        if (language.toLowerCase() === firstPart.toLowerCase()) {
-          hasLanguage = true
-          break
-        }
-      }
-
-      // Return if a language was found.
-      if (hasLanguage) {
-        console.log('The request already has a language prefix ('+firstPart+'), ignoring.')
+      if (config.supported_languages.some(lang => lang.toLowerCase() === firstPart.toLowerCase())) {
+        console.log('The request already has a language prefix (' + firstPart + '), ignoring.')
         return fetch(request)
       }
     }
   }
 
-  // Weather or not this request should be handled.
+  // Whether or not this request should be handled.
   let handleThis = config.listen_on_all_paths
 
   // Don't use route-matching when listen_on_all_paths is enabled.
@@ -110,14 +120,14 @@ const handler = async event => {
         console.log(res)
     
         // Redirect if we'd return a 404 otherwise
-        if(res.status === 404) {
+        if (res.status === 404) {
           console.log('Sub-Request is 404, continuing.')
         } else {
-          console.log('Sub-Request is '+res.status+', not redirecting.')
+          console.log('Sub-Request is ' + res.status + ', not redirecting.')
           return res
         }
       } catch(e) {
-        console.log(e);
+        console.log(e)
         console.log('Sub-Request failed, continuing.')
       }
     } else {
@@ -125,39 +135,13 @@ const handler = async event => {
       return fetch(request)
     }
   }
-
-  const headers = request.headers
-
-  // Use default language if no Accept-Language Header was sent by the client.
-  if (!headers.has('Accept-Language')) {
-    return fetch(request);
-  }
-
-  let header = headers.get('Accept-Language');
-  let language = pick(
-    config.supported_languages,
-    header
-  )
-  if(!language || language == config.default_language){
-    header = header.replace(/([a-zA-Z]{2})-[a-zA-Z]{2}/, '$1');
-    language = pick(
-      config.supported_languages,
-      header
-    )
-  }
-
-  console.log('Lang: ' + language + " Header:" + headers.get('Accept-Language') + "|" + headers.get('accept-language'));
-
-  // If accept-language-parser didn't manage to find a supported language, use the default one.
-  if (!language) {
-    language = config.default_language
-  }
-  if(language == config.default_language){
-    return fetch(request);
+  
+  if (detectedLanguage === config.default_language) {
+    return fetch(request)
   }
 
   // Do the redirect.
-  return redirectWithPrefix(url, language)
+  return redirectWithPrefix(url, detectedLanguage)
 }
 
 /**
@@ -177,3 +161,4 @@ async function redirectWithPrefix (url, prefix) {
     })
   })
 }
+
