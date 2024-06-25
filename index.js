@@ -3,7 +3,38 @@ import { pick } from 'accept-language-parser'
 
 import config from './config.js'
 
-addEventListener('fetch', (event) => event.respondWith(handler(event)))
+// Create a new cache instance
+const CACHE = caches.default
+
+// Set cache expiration (e.g., 1 hour)
+const CACHE_EXPIRATION = 60 * 60
+
+addEventListener('fetch', (event) => {
+  event.respondWith(handleRequest(event))
+})
+
+async function handleRequest(event) {
+  const request = event.request
+  const url = new URL(request.url)
+
+  // Check cache first
+  const cacheKey = new Request(url.toString(), request)
+  const cachedResponse = await CACHE.match(cacheKey)
+
+  if (cachedResponse) {
+    return cachedResponse
+  }
+
+  // If not in cache, proceed with the original logic
+  const response = await handler(event)
+
+  // Cache the response if it's a redirect
+  if (response.status === 302) {
+    event.waitUntil(CACHE.put(cacheKey, response.clone()))
+  }
+
+  return response
+}
 
 const handler = async event => {
   const request = event.request
@@ -34,9 +65,7 @@ const handler = async event => {
 
       let hasLanguage = false
 
-      for (const i in config.supported_languages) {
-        const language = config.supported_languages[i]
-
+      for (const language of config.supported_languages) {
         // If there was a match, break from the loop.
         if (language.toLowerCase() === firstPart.toLowerCase()) {
           hasLanguage = true
@@ -57,9 +86,7 @@ const handler = async event => {
 
   // Don't use route-matching when listen_on_all_paths is enabled.
   if (!config.listen_on_all_paths) {
-    for (const i in config.listen_on_paths) {
-      const path = config.listen_on_paths[i]
-
+    for (const path of config.listen_on_paths) {
       const match = matchPattern(path, url.pathname)
 
       console.log('Matching ', path, ' against ', url.pathname, match)
@@ -77,8 +104,7 @@ const handler = async event => {
 
   // Return if we are not supposed to handle this.
   if (!handleThis) {
-
-    if(config.always_on_not_found) {
+    if (config.always_on_not_found) {
       try {
         const res = await fetch(request)
         console.log(res)
@@ -88,7 +114,7 @@ const handler = async event => {
           console.log('Sub-Request is 404, continuing.')
         } else {
           console.log('Sub-Request is '+res.status+', not redirecting.')
-          return fetch(request)
+          return res
         }
       } catch(e) {
         console.log(e);
@@ -105,7 +131,6 @@ const handler = async event => {
   // Use default language if no Accept-Language Header was sent by the client.
   if (!headers.has('Accept-Language')) {
     return fetch(request);
-    //return redirectWithPrefix(url, config.default_language)
   }
 
   let header = headers.get('Accept-Language');
@@ -147,7 +172,8 @@ async function redirectWithPrefix (url, prefix) {
   return new Response(null, {
     status: 302,
     headers: new Headers({
-      Location: url.href
+      Location: url.href,
+      'Cache-Control': `public, max-age=${CACHE_EXPIRATION}`
     })
   })
 }
