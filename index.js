@@ -44,7 +44,7 @@ async function handleRequest(event) {
       const modifiedResponse = new Response(cachedResponse.body, cachedResponse)
       modifiedResponse.headers.append(
         'Set-Cookie',
-        `woocs_curr=${currency}; Path=/; HttpOnly; Max-Age=86400; Secure; SameSite=Lax`
+        `woocs_curr=${currency}; Path=/; Max-Age=86400; Secure; SameSite=Lax`
       )
       return modifiedResponse
     }
@@ -60,7 +60,7 @@ async function handleRequest(event) {
     finalResponse = new Response(response.body, response)
     finalResponse.headers.append(
       'Set-Cookie',
-      `woocs_curr=${currency}; Path=/; HttpOnly; Max-Age=86400; Secure; SameSite=Lax`
+      `woocs_curr=${currency}; Path=/; Max-Age=86400; Secure; SameSite=Lax`
     )
     // Optionally cache the response with the currency
     event.waitUntil(CACHE.put(cacheKey, finalResponse.clone()))
