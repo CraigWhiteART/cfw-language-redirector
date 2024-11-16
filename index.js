@@ -26,6 +26,7 @@ async function handleRequest(event) {
   // Parse cookies
   const cookies = parseCookies(request.headers.get('Cookie') || '')
   let currency = cookies.woocs_curr
+  const cookieExists = !!currency // Flag to check if cookie exists
 
   // If 'woocs_curr' cookie is not set, determine it based on the country
   if (!currency && country) {
@@ -38,10 +39,13 @@ async function handleRequest(event) {
   const cachedResponse = await CACHE.match(cacheKey)
 
   if (cachedResponse) {
-    // If 'woocs_curr' needs to be set, modify the cached response to include the cookie
-    if (currency) {
+    // If 'woocs_curr' needs to be set (i.e., cookie didn't exist), modify the cached response to include the cookie
+    if (currency && !cookieExists) {
       const modifiedResponse = new Response(cachedResponse.body, cachedResponse)
-      modifiedResponse.headers.append('Set-Cookie', `woocs_curr=${currency}; Path=/; HttpOnly`)
+      modifiedResponse.headers.append(
+        'Set-Cookie',
+        `woocs_curr=${currency}; Path=/; HttpOnly; Max-Age=86400; Secure; SameSite=Lax`
+      )
       return modifiedResponse
     }
     return cachedResponse
@@ -52,9 +56,12 @@ async function handleRequest(event) {
 
   // If 'woocs_curr' needs to be set, clone and modify the response
   let finalResponse = response
-  if (currency) {
+  if (currency && !cookieExists) {
     finalResponse = new Response(response.body, response)
-    finalResponse.headers.append('Set-Cookie', `woocs_curr=${currency}; Path=/; HttpOnly`)
+    finalResponse.headers.append(
+      'Set-Cookie',
+      `woocs_curr=${currency}; Path=/; HttpOnly; Max-Age=86400; Secure; SameSite=Lax`
+    )
     // Optionally cache the response with the currency
     event.waitUntil(CACHE.put(cacheKey, finalResponse.clone()))
   }
