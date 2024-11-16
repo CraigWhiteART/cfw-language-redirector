@@ -20,23 +20,51 @@ async function handleRequest(event) {
   // Detect the language
   const detectedLanguage = detectLanguage(request)
 
+  // Detect the country from Cloudflare's CF property
+  const country = request.cf && request.cf.country ? request.cf.country : null
+
+  // Parse cookies
+  const cookies = parseCookies(request.headers.get('Cookie') || '')
+  let currency = cookies.woocs_curr
+
+  // If 'woocs_curr' cookie is not set, determine it based on the country
+  if (!currency && country) {
+    currency = mapCountryToCurrency(country)
+    // Proceed to set the cookie in the response later
+  }
+
   // Check cache first
   const cacheKey = new Request(`${url.toString()}:${detectedLanguage}`, request)
   const cachedResponse = await CACHE.match(cacheKey)
 
   if (cachedResponse) {
+    // If 'woocs_curr' needs to be set, modify the cached response to include the cookie
+    if (currency) {
+      const modifiedResponse = new Response(cachedResponse.body, cachedResponse)
+      modifiedResponse.headers.append('Set-Cookie', `woocs_curr=${currency}; Path=/; HttpOnly`)
+      return modifiedResponse
+    }
     return cachedResponse
   }
 
   // If not in cache, proceed with the original logic
   const response = await handler(event, detectedLanguage)
 
+  // If 'woocs_curr' needs to be set, clone and modify the response
+  let finalResponse = response
+  if (currency) {
+    finalResponse = new Response(response.body, response)
+    finalResponse.headers.append('Set-Cookie', `woocs_curr=${currency}; Path=/; HttpOnly`)
+    // Optionally cache the response with the currency
+    event.waitUntil(CACHE.put(cacheKey, finalResponse.clone()))
+  }
+
   // Cache the response if it's a redirect
   if (response.status === 302) {
     event.waitUntil(CACHE.put(cacheKey, response.clone()))
   }
 
-  return response
+  return finalResponse
 }
 
 function detectLanguage(request) {
@@ -48,7 +76,7 @@ function detectLanguage(request) {
 
   let header = headers.get('Accept-Language')
   let language = pick(config.supported_languages, header)
-  
+
   if (!language || language === config.default_language) {
     header = header.replace(/([a-zA-Z]{2})-[a-zA-Z]{2}/, '$1')
     language = pick(config.supported_languages, header)
@@ -118,7 +146,7 @@ const handler = async (event, detectedLanguage) => {
       try {
         const res = await fetch(request)
         console.log(res)
-    
+
         // Redirect if we'd return a 404 otherwise
         if (res.status === 404) {
           console.log('Sub-Request is 404, continuing.')
@@ -162,3 +190,51 @@ async function redirectWithPrefix (url, prefix) {
   })
 }
 
+/**
+ * Parse cookies from the Cookie header.
+ * @param {string} cookieHeader The Cookie header string
+ * @returns {Object} An object mapping cookie names to values
+ */
+function parseCookies(cookieHeader) {
+  return cookieHeader.split(';').reduce((cookies, cookie) => {
+    const [name, ...rest] = cookie.trim().split('=')
+    cookies[name] = rest.join('=')
+    return cookies
+  }, {})
+}
+
+/**
+ * Map a country code to its corresponding currency.
+ * @param {string} countryCode The country code (e.g., 'US', 'AU')
+ * @returns {string} The corresponding currency code
+ */
+function mapCountryToCurrency(countryCode) {
+  const mapping = {
+    'AU': 'AUD',
+    'US': 'USD',
+    'UK': 'GBP',
+    'CA': 'CAD',
+    'MX': 'MXN',
+    'FR': 'EUR', // France
+    'DE': 'EUR', // Germany
+    'IT': 'EUR', // Italy
+    'ES': 'EUR', // Spain
+    'NL': 'EUR', // Netherlands
+    'BE': 'EUR', // Belgium
+    'SE': 'SEK', // Sweden
+    'IE': 'EUR', // Ireland
+    'PT': 'EUR', // Portugal
+    'CH': 'CHF', // Switzerland
+    'AT': 'EUR', // Austria
+    'PL': 'PLN', // Poland
+    'SK': 'EUR', // Slovakia
+    'SI': 'EUR', // Slovenia
+    'GR': 'EUR', // Greece
+    'LU': 'EUR', // Luxembourg
+    'MT': 'EUR', // Malta
+    'CY': 'EUR', // Cyprus
+    'AE': 'AED' // United Arab Emirates
+  }
+
+  return mapping[countryCode.toUpperCase()] || config.default_currency
+}
