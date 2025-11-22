@@ -217,31 +217,64 @@ function parseCookies(cookieHeader) {
  */
 function mapCountryToCurrency(countryCode) {
   const mapping = {
-    'AU': 'AUD',
-    'US': 'USD',
-    'UK': 'GBP',
-    'CA': 'CAD',
-    'MX': 'MXN',
-    'FR': 'EUR', // France
-    'DE': 'EUR', // Germany
-    'IT': 'EUR', // Italy
-    'ES': 'EUR', // Spain
-    'NL': 'EUR', // Netherlands
-    'BE': 'EUR', // Belgium
-    'SE': 'SEK', // Sweden
-    'IE': 'EUR', // Ireland
-    'PT': 'EUR', // Portugal
-    'CH': 'CHF', // Switzerland
-    'AT': 'EUR', // Austria
-    'PL': 'PLN', // Poland
-    'SK': 'EUR', // Slovakia
-    'SI': 'EUR', // Slovenia
-    'GR': 'EUR', // Greece
-    'LU': 'EUR', // Luxembourg
-    'MT': 'EUR', // Malta
-    'CY': 'EUR', // Cyprus
-    'AE': 'AED' // United Arab Emirates
-  }
+    // Primary currencies
+    AU: 'AUD', // Australia
+    US: 'USD', // United States
+    CA: 'CAD', // Canada
+    GB: 'GBP', // United Kingdom
+    EU: 'EUR', // Cloudflare's "Europe" pseudo-country
+
+    AE: 'AED', // United Arab Emirates
+    AR: 'ARS', // Argentina
+    BR: 'BRL', // Brazil
+    CH: 'CHF', // Switzerland
+    CR: 'CRC', // Costa Rica
+    CZ: 'CZK', // Czech Republic
+    DK: 'DKK', // Denmark
+    ID: 'IDR', // Indonesia
+    JP: 'JPY', // Japan
+    NZ: 'NZD', // New Zealand
+    PL: 'PLN', // Poland
+    SA: 'SAR', // Saudi Arabia
+    SE: 'SEK', // Sweden
+    SG: 'SGD', // Singapore
+    VE: 'VEF', // Venezuela
+    ZA: 'ZAR', // South Africa
+
+    // Common EUR countries
+    AT: 'EUR', // Austria
+    BE: 'EUR', // Belgium
+    CY: 'EUR', // Cyprus
+    DE: 'EUR', // Germany
+    EE: 'EUR', // Estonia
+    ES: 'EUR', // Spain
+    FI: 'EUR', // Finland
+    FR: 'EUR', // France
+    GR: 'EUR', // Greece
+    IE: 'EUR', // Ireland
+    IT: 'EUR', // Italy
+    LT: 'EUR', // Lithuania
+    LU: 'EUR', // Luxembourg
+    LV: 'EUR', // Latvia
+    MT: 'EUR', // Malta
+    NL: 'EUR', // Netherlands
+    PT: 'EUR', // Portugal
+    SI: 'EUR', // Slovenia
+    SK: 'EUR', // Slovakia
+
+    // Extra AUD territories
+    CC: 'AUD', // Cocos (Keeling) Islands
+    CX: 'AUD', // Christmas Island
+    NF: 'AUD', // Norfolk Island
+
+    // Extra USD territories
+    AS: 'USD', // American Samoa
+    GU: 'USD', // Guam
+    MP: 'USD', // Northern Mariana Islands
+    PR: 'USD', // Puerto Rico
+    UM: 'USD', // U.S. Minor Outlying Islands
+    VI: 'USD' // U.S. Virgin Islands
+  };
 
   return mapping[countryCode.toUpperCase()] || config.default_currency
 }
