@@ -9,7 +9,7 @@ const CACHE = caches.default
 // Set cache expiration (e.g., 1 hour)
 const CACHE_EXPIRATION = 60 * 60
 
-addEventListener('fetch', (event) => {
+addEventListener('fetch', event => {
   event.respondWith(handleRequest(event))
 })
 
@@ -44,7 +44,7 @@ async function handleRequest(event) {
       const modifiedResponse = new Response(cachedResponse.body, cachedResponse)
       modifiedResponse.headers.append(
         'Set-Cookie',
-        `woocs_curr=${currency}; Path=/; Max-Age=86400; Secure; SameSite=Lax`
+        `woocs_curr=${currency}; Path=/; Max-Age=86400; Secure; SameSite=Lax`,
       )
       return modifiedResponse
     }
@@ -60,7 +60,7 @@ async function handleRequest(event) {
     finalResponse = new Response(response.body, response)
     finalResponse.headers.append(
       'Set-Cookie',
-      `woocs_curr=${currency}; Path=/; Max-Age=86400; Secure; SameSite=Lax`
+      `woocs_curr=${currency}; Path=/; Max-Age=86400; Secure; SameSite=Lax`,
     )
     // Optionally cache the response with the currency
     event.waitUntil(CACHE.put(cacheKey, finalResponse.clone()))
@@ -89,7 +89,14 @@ function detectLanguage(request) {
     language = pick(config.supported_languages, header)
   }
 
-  console.log('Lang: ' + language + " Header:" + headers.get('Accept-Language') + "|" + headers.get('accept-language'))
+  console.log(
+    'Lang: ' +
+      language +
+      ' Header:' +
+      headers.get('Accept-Language') +
+      '|' +
+      headers.get('accept-language'),
+  )
 
   return language || config.default_language
 }
@@ -103,10 +110,10 @@ const handler = async (event, detectedLanguage) => {
     return fetch(request)
   }
 
-  const url = new URL(request.url);
+  const url = new URL(request.url)
 
-  const mediaRegex = /\.(png|jpeg|jpg|webp|mp4)([?\/].*)?$/i; // Matches file extensions for images and videos
-  const wpRegex = /^\/wp-/; // Matches URLs that start with /wp-
+  const mediaRegex = /\.(png|jpeg|jpg|webp|mp4)([?\/].*)?$/i // Matches file extensions for images and videos
+  const wpRegex = /^\/wp-/ // Matches URLs that start with /wp-
 
   if (mediaRegex.test(url.pathname) || wpRegex.test(url.pathname)) {
     return fetch(request)
@@ -119,8 +126,16 @@ const handler = async (event, detectedLanguage) => {
     if (urlArray.length > 2) {
       const firstPart = urlArray[1]
 
-      if (config.supported_languages.some(lang => lang.toLowerCase() === firstPart.toLowerCase())) {
-        console.log('The request already has a language prefix (' + firstPart + '), ignoring.')
+      if (
+        config.supported_languages.some(
+          lang => lang.toLowerCase() === firstPart.toLowerCase(),
+        )
+      ) {
+        console.log(
+          'The request already has a language prefix (' +
+            firstPart +
+            '), ignoring.',
+        )
         return fetch(request)
       }
     }
@@ -161,7 +176,7 @@ const handler = async (event, detectedLanguage) => {
           console.log('Sub-Request is ' + res.status + ', not redirecting.')
           return res
         }
-      } catch(e) {
+      } catch (e) {
         console.log(e)
         console.log('Sub-Request failed, continuing.')
       }
@@ -170,7 +185,7 @@ const handler = async (event, detectedLanguage) => {
       return fetch(request)
     }
   }
-  
+
   if (detectedLanguage === config.default_language) {
     return fetch(request)
   }
@@ -185,15 +200,15 @@ const handler = async (event, detectedLanguage) => {
  * @param {string} prefix The string to prefix 'url' with.
  * @returns {Response} The final response
  */
-async function redirectWithPrefix (url, prefix) {
+async function redirectWithPrefix(url, prefix) {
   url.pathname = '/' + prefix + url.pathname
 
   return new Response(null, {
     status: 302,
     headers: new Headers({
       Location: url.href,
-      'Cache-Control': `public, max-age=${CACHE_EXPIRATION}`
-    })
+      'Cache-Control': `public, max-age=${CACHE_EXPIRATION}`,
+    }),
   })
 }
 
@@ -212,36 +227,90 @@ function parseCookies(cookieHeader) {
 
 /**
  * Map a country code to its corresponding currency.
+ * Cloudflare country code (CF-IPCountry) -> ISO 4217 currency
  * @param {string} countryCode The country code (e.g., 'US', 'AU')
  * @returns {string} The corresponding currency code
  */
 function mapCountryToCurrency(countryCode) {
-  const mapping = {
-    'AU': 'AUD',
-    'US': 'USD',
-    'UK': 'GBP',
-    'CA': 'CAD',
-    'MX': 'MXN',
-    'FR': 'EUR', // France
-    'DE': 'EUR', // Germany
-    'IT': 'EUR', // Italy
-    'ES': 'EUR', // Spain
-    'NL': 'EUR', // Netherlands
-    'BE': 'EUR', // Belgium
-    'SE': 'SEK', // Sweden
-    'IE': 'EUR', // Ireland
-    'PT': 'EUR', // Portugal
-    'CH': 'CHF', // Switzerland
-    'AT': 'EUR', // Austria
-    'PL': 'PLN', // Poland
-    'SK': 'EUR', // Slovakia
-    'SI': 'EUR', // Slovenia
-    'GR': 'EUR', // Greece
-    'LU': 'EUR', // Luxembourg
-    'MT': 'EUR', // Malta
-    'CY': 'EUR', // Cyprus
-    'AE': 'AED' // United Arab Emirates
+  const countryToCurrency = {
+    // Primary currencies
+    AU: 'AUD', // Australia
+    US: 'USD', // United States
+    CA: 'CAD', // Canada
+    GB: 'GBP', // United Kingdom
+    EU: 'EUR', // Cloudflare's "Europe" pseudo-country
+
+    AE: 'AED', // United Arab Emirates
+    AR: 'ARS', // Argentina
+    BR: 'BRL', // Brazil
+    CH: 'CHF', // Switzerland
+    CR: 'CRC', // Costa Rica
+    CZ: 'CZK', // Czech Republic
+    DK: 'DKK', // Denmark
+    ID: 'IDR', // Indonesia
+    JP: 'JPY', // Japan
+    NZ: 'NZD', // New Zealand
+    PL: 'PLN', // Poland
+    SA: 'SAR', // Saudi Arabia
+    SE: 'SEK', // Sweden
+    SG: 'SGD', // Singapore
+    VE: 'VEF', // Venezuela
+    ZA: 'ZAR', // South Africa
+
+    // Common EUR countries
+    AT: 'EUR', // Austria
+    BE: 'EUR', // Belgium
+    CY: 'EUR', // Cyprus
+    DE: 'EUR', // Germany
+    EE: 'EUR', // Estonia
+    ES: 'EUR', // Spain
+    FI: 'EUR', // Finland
+    FR: 'EUR', // France
+    GR: 'EUR', // Greece
+    IE: 'EUR', // Ireland
+    IT: 'EUR', // Italy
+    LT: 'EUR', // Lithuania
+    LU: 'EUR', // Luxembourg
+    LV: 'EUR', // Latvia
+    MT: 'EUR', // Malta
+    NL: 'EUR', // Netherlands
+    PT: 'EUR', // Portugal
+    SI: 'EUR', // Slovenia
+    SK: 'EUR', // Slovakia
+
+    // Extra AUD territories
+    CC: 'AUD', // Cocos (Keeling) Islands
+    CX: 'AUD', // Christmas Island
+    NF: 'AUD', // Norfolk Island
+
+    // Extra USD territories
+    AS: 'USD', // American Samoa
+    GU: 'USD', // Guam
+    MP: 'USD', // Northern Mariana Islands
+    PR: 'USD', // Puerto Rico
+    UM: 'USD', // U.S. Minor Outlying Islands
+    VI: 'USD', // U.S. Virgin Islands
   }
 
-  return mapping[countryCode.toUpperCase()] || config.default_currency
+  return getCurrencyFromCountry(
+    countryCode,
+    countryToCurrency,
+    config.default_currency,
+  )
+}
+
+/**
+ * Helper function to get currency from country code.
+ * @param {string} cfCountry Cloudflare's country code (e.g. request.cf.country)
+ * @param {Object} countryToCurrency The country to currency mapping object
+ * @param {string} fallback The fallback currency (defaults to USD)
+ * @returns {string} The corresponding currency code
+ */
+function getCurrencyFromCountry(
+  cfCountry,
+  countryToCurrency,
+  fallback = 'USD',
+) {
+  const code = (cfCountry || '').toUpperCase()
+  return countryToCurrency[code] || fallback
 }
